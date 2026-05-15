@@ -39,6 +39,30 @@ def elevator_only_deterministic_model():
 
 def elevator_only_stochastic_model(num_simulations=1000, mean_capacity=annual_capacity_per_elevator * num_elevators, 
                                    std_dev=100000, delta_time=1.0):
+    """
+    Simulates the elevator-only model with stochastic delivery amounts per time step.
+    
+    Parameters:
+    - num_simulations: Number of simulation runs to perform.
+    - mean_capacity: Average delivery capacity per time step (default is annual capacity).
+    - std_dev: Standard deviation for the delivery capacity to introduce variability.
+    - delta_time: Time step in years (e.g., 1.0 for yearly, 0.25 for quarterly, 1/12 for monthly, 1/52 for weekly). 
+    
+    Outputs:
+    - A dictionary containing:
+        - 'years': List of years corresponding to the time steps.
+        - 'mass_delivered': Average mass delivered to space at each time step across simulations.
+        - 'cumulative_cost': Average cumulative cost at each time step across simulations.
+        - 'completion_timesteps': List of time steps taken to complete delivery in each simulation.
+        - 'completion_years': List of years taken to complete delivery in each simulation.
+        - 'final_costs': List of final cumulative costs at completion for each simulation.
+        - 'mean_completion_timestep': Average time steps to completion across simulations.
+        - 'std_completion_timestep': Standard deviation of time steps to completion across simulations.
+        - 'mean_completion_year': Average years to completion across simulations.
+        - 'std_completion_year': Standard deviation of years to completion across simulations.
+        - 'mean_final_cost': Average final cumulative cost at completion across simulations.
+        - 'std_final_cost': Standard deviation of final cumulative cost at completion across simulations.
+    """
     timestep_capacity = mean_capacity * delta_time
     timestep_std_dev = std_dev * delta_time
     timestep_operational_cost = operational_cost_per_year_per_elevator * num_elevators * delta_time
