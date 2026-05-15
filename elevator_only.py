@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import random
 
 #===================== Estimates ====================
 total_cost_per_elevator = 10e9
