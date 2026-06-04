@@ -11,7 +11,6 @@ num_elevators = 3
 annual_capacity_per_elevator = 179_000
 start_year = 2050
 
-
 def elevator_only_deterministic_model():
     years = []
     mass_delivered = []
@@ -37,7 +36,7 @@ def elevator_only_deterministic_model():
     }
 
 def elevator_only_stochastic_model(num_simulations=1000, mean_capacity=annual_capacity_per_elevator * num_elevators, 
-                                   std_dev=100000, delta_time=1.0):
+                                   std_dev=1000000, delta_time=1.0):
     """
     Simulates the elevator-only model with stochastic delivery amounts per time step.
     
@@ -88,6 +87,15 @@ def elevator_only_stochastic_model(num_simulations=1000, mean_capacity=annual_ca
         final_costs.append(cost)
         timestep_deliveries.append(timestep_data)
         
+    individual_simulations = []
+    for timestep_data in timestep_deliveries:
+        sim_years = [start_year + data['timestep'] * delta_time for data in timestep_data]
+        sim_delivered = [data['delivered'] for data in timestep_data]
+        individual_simulations.append({
+            'years': sim_years,
+            'delivered': sim_delivered,
+        })
+    
     years_list = []
     mass_delivered_per_year = []
     cost_per_year = []
@@ -127,6 +135,7 @@ def elevator_only_stochastic_model(num_simulations=1000, mean_capacity=annual_ca
         'years': years_list,
         'mass_delivered': mass_delivered_per_year,
         'cumulative_cost': cost_per_year,
+        'individual_simulations': individual_simulations,
         'completion_timesteps': completion_timesteps,
         'completion_years': completion_years,
         'final_costs': final_costs,
@@ -146,10 +155,17 @@ def plot_results(results, title="Please input a title", show=False):
     plt.suptitle(title)
     
     plt.subplot(1, 2, 1)
-    plt.plot(results['years'], results['mass_delivered'], marker='o')
+    
+    for sim in results['individual_simulations']:
+        plt.plot(sim['years'], sim['delivered'], alpha=0.05, color='blue', linewidth=0.5)
+    
+    plt.plot(results['years'], results['mass_delivered'], marker='o', color='red', linewidth=2.5, label='Mean', zorder=10)
+    
     plt.title('Mass Delivered to Space Over Time')
     plt.xlabel('Year')
     plt.ylabel('Mass Delivered (metric tons)')
+    if 'individual_simulations' in results:
+        plt.legend()
     
     plt.subplot(1, 2, 2)
     plt.plot(results['years'], results['cumulative_cost'], marker='o', color='orange')
@@ -162,54 +178,12 @@ def plot_results(results, title="Please input a title", show=False):
         plt.show()
 
 if __name__ == "__main__":
-    det_results = elevator_only_deterministic_model()
-    plot_results(det_results, title="Elevator-Only Deterministic Model")
-    
-    stoch_results_yearly = elevator_only_stochastic_model(num_simulations=1, delta_time=1.0)
-    plot_results(stoch_results_yearly, title="Elevator-Only Stochastic Model - Yearly (1000 Simulations)")
-    
-    stoch_results_quarterly = elevator_only_stochastic_model(num_simulations=1, delta_time=0.25)
-    plot_results(stoch_results_quarterly, title="Elevator-Only Stochastic Model - Quarterly (1000 Simulations)")
-    
-    stoch_results_monthly = elevator_only_stochastic_model(num_simulations=1, delta_time=1/12)
-    plot_results(stoch_results_monthly, title="Elevator-Only Stochastic Model - Monthly (1000 Simulations)")
-    
-    stoch_result_weekly = elevator_only_stochastic_model(num_simulations=1, delta_time=1/52)
-    plot_results(stoch_result_weekly, title="Elevator-Only Stochastic Model - Weekly (1000 Simulations)")
-
-    
-    print("=" * 70)
-    print("DETERMINISTIC MODEL RESULTS:")
-    print("=" * 70)
-    print(f"Years to Deliver Total Mass: {len(det_results['years'])}")
-    print(f"Total Cumulative Cost: ${det_results['cumulative_cost'][-1]:,.2f}")
-    
-    print("\n" + "=" * 70)
-    print("STOCHASTIC MODEL - YEARLY TIME STEPS (delta_time=1.0):")
-    print("=" * 70)
-    print(f"Mean Completion Time: {stoch_results_yearly['mean_completion_year']:.2f} ± {stoch_results_yearly['std_completion_year']:.2f} years")
-    print(f"Mean Final Cost: ${stoch_results_yearly['mean_final_cost']:,.2f} ± ${stoch_results_yearly['std_final_cost']:,.2f}")
-    print(f"Range: {min(stoch_results_yearly['completion_years']):.1f} - {max(stoch_results_yearly['completion_years']):.1f} years")
-    
-    print("\n" + "=" * 70)
-    print("STOCHASTIC MODEL - QUARTERLY TIME STEPS (delta_time=0.25):")
-    print("=" * 70)
-    print(f"Mean Completion Time: {stoch_results_quarterly['mean_completion_year']:.2f} ± {stoch_results_quarterly['std_completion_year']:.2f} years")
-    print(f"Mean Final Cost: ${stoch_results_quarterly['mean_final_cost']:,.2f} ± ${stoch_results_quarterly['std_final_cost']:,.2f}")
-    print(f"Range: {min(stoch_results_quarterly['completion_years']):.2f} - {max(stoch_results_quarterly['completion_years']):.2f} years")
+    stoch_results_monthly = elevator_only_stochastic_model(num_simulations=1000, delta_time=1/12)
+    plot_results(stoch_results_monthly, title="Elevator-Only Stochastic Model - Monthly (1000 Simulations)", show=True)
     
     print("\n" + "=" * 70)
     print("STOCHASTIC MODEL - MONTHLY TIME STEPS (delta_time=1/12):")
     print("=" * 70)
     print(f"Mean Completion Time: {stoch_results_monthly['mean_completion_year']:.2f} ± {stoch_results_monthly['std_completion_year']:.2f} years")
     print(f"Mean Final Cost: ${stoch_results_monthly['mean_final_cost']:,.2f} ± ${stoch_results_monthly['std_final_cost']:,.2f}")
-    print(f"Range: {min(stoch_results_monthly['completion_years']):.3f} - {max(stoch_results_monthly['completion_years']):.3f} years")
-    
-    print("\n" + "=" * 70)
-    print("STOCHASTIC MODEL - WEEKLY TIME STEPS (delta_time=1/52):")
-    print("=" * 70)
-    print(f"Mean Completion Time: {stoch_result_weekly['mean_completion_year']:.2f} ± {stoch_result_weekly['std_completion_year']:.2f} years")
-    print(f"Mean Final Cost: ${stoch_result_weekly['mean_final_cost']:,.2f} ± ${stoch_result_weekly['std_final_cost']:,.2f}")
-    print(f"Range: {min(stoch_result_weekly['completion_years']):.3f} - {max(stoch_result_weekly['completion_years']):.3f} years")
-
-    plt.show() 
+    print(f"Range: {min(stoch_results_monthly['completion_years']):.3f} - {max(stoch_results_monthly['completion_years']):.3f} years") 

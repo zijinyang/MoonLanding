@@ -6,6 +6,8 @@ req_ex = [
 ]
 
 def verify_requirements(req_dict):
+    if not isinstance(req_dict, dict):
+        raise ValueError(f"Requirements must be a dictionary. Found: {type(req_dict)}")
     current_req = 0
     current_year = 2050
     for year, req in req_dict.items():
