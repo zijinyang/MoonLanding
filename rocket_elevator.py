@@ -1,52 +1,26 @@
-"""
-rocket_elevator.py
-
-Combined rocket + space elevator simulation for Moon Colony supply.
-
-Two-phase approach:
-  1. plan_launches() pre-computes the globally cost-optimal rocket schedule
-     using Earliest-Deadline-First + cheapest-slot-first assignment.
-  2. simulate() runs the timeline, following that fixed schedule.
-
-Why this is better than deciding at each timestep:
-  Since launch costs are fully deterministic (seasonal patterns repeat every
-  year), we can see the entire cost landscape in advance and pack launches
-  into the globally cheapest available (site, month) slots instead of
-  committing to whichever site happens to be cheapest right now.
-"""
-
 import math
 import matplotlib.pyplot as plt
 from requirements import verify_requirements
 
 # ==================== Estimates ====================
 
-# Space Elevator (matches elevator_only.py)
-ELEVATOR_BUILD_COST_USD      = 10e9        # USD per elevator, one-time capital cost
-ELEVATOR_OPEX_USD_PER_YEAR   = 100e6       # USD per elevator per year
+ELEVATOR_BUILD_COST_USD      = 10e9
+ELEVATOR_OPEX_USD_PER_YEAR   = 100e6
 NUM_ELEVATORS                = 3
-ANNUAL_CAPACITY_PER_ELEVATOR = 179_000     # metric tons / year; zero atmospheric pollution
+ANNUAL_CAPACITY_PER_ELEVATOR = 179_000
 
-# Rocket (advanced 2050-era heavy-lift vehicle)
-ROCKET_PAYLOAD_TONS          = 125         # metric tons per launch (midpoint of 100–150)
-ROCKET_CO2_KG_PER_LAUNCH     = 400_000     # kg CO₂-eq per launch (~400 metric tons, est. adv. Falcon Heavy)
+ROCKET_PAYLOAD_TONS          = 125 
+ROCKET_CO2_KG_PER_LAUNCH     = 400_000
 
-# Mission
-TOTAL_MASS  = 100e6   # metric tons to deliver to Moon Colony
+TOTAL_MASS  = 100e6 
 START_YEAR  = 2050
 
 # ==================== Launch Sites ====================
-# base_cost:            USD per launch (2050 projected cost)
-# monthly_multipliers:  seasonal cost multiplier, index 0=Jan … 11=Dec
-#                       driven by weather windows, logistics demand, range scheduling
-# max_launches_per_month: site throughput cap
-# co2_multiplier:       relative CO₂ factor vs. baseline (propellant mix, transport logistics)
-
 LAUNCH_SITES = {
     'Florida (Kennedy)': {
         'base_cost': 150_000_000,
         'monthly_multipliers': [1.05, 1.00, 0.98, 0.95, 0.92, 0.98,
-                                 1.10, 1.15, 1.20, 1.10, 1.05, 1.08],  # hurricane season Aug–Oct
+                                 1.10, 1.15, 1.20, 1.10, 1.05, 1.08],
         'max_launches_per_month': 4,
         'co2_multiplier': 1.00,
     },
@@ -60,7 +34,7 @@ LAUNCH_SITES = {
     'Texas (Boca Chica)': {
         'base_cost': 145_000_000,
         'monthly_multipliers': [1.00, 1.00, 1.02, 1.05, 1.10, 1.15,
-                                 1.20, 1.18, 1.10, 1.00, 0.98, 0.95],  # summer heat
+                                 1.20, 1.18, 1.10, 1.00, 0.98, 0.95], 
         'max_launches_per_month': 5,
         'co2_multiplier': 1.00,
     },
@@ -74,28 +48,28 @@ LAUNCH_SITES = {
     'Alaska': {
         'base_cost': 140_000_000,
         'monthly_multipliers': [1.40, 1.35, 1.20, 1.05, 0.90, 0.85,
-                                 0.85, 0.88, 1.00, 1.15, 1.30, 1.40],  # polar winter surcharge
+                                 0.85, 0.88, 1.00, 1.15, 1.30, 1.40],
         'max_launches_per_month': 2,
         'co2_multiplier': 1.05,
     },
     'Kazakhstan (Baikonur)': {
         'base_cost': 120_000_000,
         'monthly_multipliers': [1.30, 1.25, 1.10, 0.95, 0.90, 0.88,
-                                 0.90, 0.92, 1.00, 1.10, 1.20, 1.30],  # continental winter
+                                 0.90, 0.92, 1.00, 1.10, 1.20, 1.30],
         'max_launches_per_month': 4,
         'co2_multiplier': 1.10,
     },
     'French Guiana (Kourou)': {
         'base_cost': 155_000_000,
         'monthly_multipliers': [0.95, 0.98, 1.00, 1.05, 1.10, 1.15,
-                                 1.10, 1.05, 1.00, 0.95, 0.92, 0.93],  # rainy season May–Jul
+                                 1.10, 1.05, 1.00, 0.95, 0.92, 0.93],
         'max_launches_per_month': 3,
         'co2_multiplier': 1.00,
     },
     'India (Satish Dhawan)': {
         'base_cost': 110_000_000,
         'monthly_multipliers': [0.90, 0.88, 0.90, 1.00, 1.10, 1.30,
-                                 1.40, 1.35, 1.20, 0.95, 0.88, 0.88],  # monsoon Jun–Sep
+                                 1.40, 1.35, 1.20, 0.95, 0.88, 0.88],
         'max_launches_per_month': 3,
         'co2_multiplier': 1.05,
     },
@@ -109,7 +83,7 @@ LAUNCH_SITES = {
     'New Zealand (Mahia)': {
         'base_cost': 130_000_000,
         'monthly_multipliers': [0.90, 0.92, 0.98, 1.05, 1.10, 1.15,
-                                 1.12, 1.08, 1.00, 0.95, 0.92, 0.88],  # southern hemisphere seasons
+                                 1.12, 1.08, 1.00, 0.95, 0.92, 0.88], 
         'max_launches_per_month': 3,
         'co2_multiplier': 1.00,
     },
@@ -137,26 +111,9 @@ def plan_launches(requirements: dict, delta_time: float = 1 / 12) -> dict:
     Pre-compute the cost-minimal rocket launch schedule.
 
     Returns {(step, site_name): num_launches} covering all deadlines.
-
-    Algorithm — EDF + cheapest-slot-first for nested deadlines:
-      For each deadline d (processed earliest-first):
-        1. Compute how many ADDITIONAL launches are needed before d,
-           beyond what the elevator will have delivered by then and
-           what is already committed to earlier deadlines.
-        2. Among all (step, site) slots with step <= d_step, greedily
-           assign that many launches to the cheapest available slots first.
-
-    Optimality argument:
-      The deadline windows are nested (every slot eligible for deadline d is
-      also eligible for all later deadlines). For nested intervals, greedy
-      cheapest-slot-first applied incrementally per deadline minimises total
-      cost — using a cheaper slot earlier never prevents a later deadline from
-      being satisfied at equal or lower cost.
     """
     step_elevator = ANNUAL_CAPACITY_PER_ELEVATOR * NUM_ELEVATORS * delta_time
 
-    # --- Required launch totals per deadline ---
-    # By step d_step the elevator has run for (d_step + 1) steps.
     deadline_targets: list[tuple[int, int]] = []   # (d_step, cumulative_launches_needed)
     for deadline_year, fraction in sorted(requirements.items()):
         d_step = round((deadline_year - START_YEAR) / delta_time)
@@ -165,32 +122,28 @@ def plan_launches(requirements: dict, delta_time: float = 1 / 12) -> dict:
         launches = max(0, math.ceil((target_mass - elevator_total) / ROCKET_PAYLOAD_TONS))
         deadline_targets.append((d_step, launches))
 
-    # Find the latest step that actually needs rockets.
     last_needed_step = max(
         (d_step for d_step, n in deadline_targets if n > 0),
         default=0
     )
     if last_needed_step == 0 and all(n == 0 for _, n in deadline_targets):
-        return {}   # elevator alone satisfies everything
+        return {}  
 
-    # --- Build slot list: one entry per (step, site), sorted cheapest-first ---
     all_slots: list[tuple[float, int, str]] = []   # (cost, step, site_name)
     for step in range(last_needed_step + 1):
         month = _month_from_step(step, delta_time)
         for site_name, info in LAUNCH_SITES.items():
             cost = info['base_cost'] * info['monthly_multipliers'][month]
             all_slots.append((cost, step, site_name))
-    all_slots.sort()   # cheapest first
+    all_slots.sort() 
 
-    # Remaining capacity per slot key
     remaining_cap: dict[tuple[int, str], int] = {
         (step, site): LAUNCH_SITES[site]['max_launches_per_month']
         for _, step, site in all_slots
     }
 
-    # --- EDF assignment ---
     schedule: dict[tuple[int, str], int] = {}
-    committed = 0   # total launches committed so far across all deadlines
+    committed = 0  
 
     for d_step, total_needed in deadline_targets:
         to_assign = total_needed - committed
@@ -218,11 +171,6 @@ def plan_launches(requirements: dict, delta_time: float = 1 / 12) -> dict:
 
 def simulate(requirements: dict, delta_time: float = 1 / 12) -> dict:
     """
-    Simulate combined elevator + rocket delivery to meet requirements.
-
-    Calls plan_launches() once to get the optimal schedule, then runs the
-    timeline step-by-step following it exactly.
-
     requirements : dict {year: fraction_of_total}, verified by verify_requirements().
     delta_time   : simulation timestep in years (default 1/12 = monthly).
     """
