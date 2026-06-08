@@ -5,88 +5,42 @@ from requirements import verify_requirements
 # ==================== Estimates ====================
 
 ELEVATOR_BUILD_COST_USD      = 10e9
-ELEVATOR_OPEX_USD_PER_YEAR   = 100e6
+ELEVATOR_OPEX_USD_PER_YEAR   = 10e7
 NUM_ELEVATORS                = 3
 ANNUAL_CAPACITY_PER_ELEVATOR = 179_000
 
-ROCKET_PAYLOAD_TONS          = 125 
-ROCKET_CO2_KG_PER_LAUNCH     = 400_000
+ROCKET_PAYLOAD_TONS    = 125
+ROCKET_LAUNCH_COST_USD = 150_000_000
+ERF_BASE_MW_M2         = 0.3
 
 TOTAL_MASS  = 100e6 
 START_YEAR  = 2050
 
 # ==================== Launch Sites ====================
 LAUNCH_SITES = {
-    'Florida (Kennedy)': {
-        'base_cost': 150_000_000,
-        'monthly_multipliers': [1.05, 1.00, 0.98, 0.95, 0.92, 0.98,
-                                 1.10, 1.15, 1.20, 1.10, 1.05, 1.08],
-        'max_launches_per_month': 4,
-        'co2_multiplier': 1.00,
-    },
-    'California (Vandenberg)': {
-        'base_cost': 160_000_000,
-        'monthly_multipliers': [1.00, 1.00, 0.98, 0.95, 0.92, 0.90,
-                                 0.92, 0.95, 1.00, 1.02, 1.05, 1.02],
-        'max_launches_per_month': 3,
-        'co2_multiplier': 1.00,
-    },
-    'Texas (Boca Chica)': {
-        'base_cost': 145_000_000,
-        'monthly_multipliers': [1.00, 1.00, 1.02, 1.05, 1.10, 1.15,
-                                 1.20, 1.18, 1.10, 1.00, 0.98, 0.95], 
-        'max_launches_per_month': 5,
-        'co2_multiplier': 1.00,
-    },
-    'Virginia (Wallops)': {
-        'base_cost': 165_000_000,
-        'monthly_multipliers': [1.10, 1.05, 1.00, 0.95, 0.90, 0.92,
-                                 0.95, 1.00, 1.05, 1.05, 1.08, 1.12],
-        'max_launches_per_month': 2,
-        'co2_multiplier': 1.00,
-    },
-    'Alaska': {
-        'base_cost': 140_000_000,
-        'monthly_multipliers': [1.40, 1.35, 1.20, 1.05, 0.90, 0.85,
-                                 0.85, 0.88, 1.00, 1.15, 1.30, 1.40],
-        'max_launches_per_month': 2,
-        'co2_multiplier': 1.05,
-    },
-    'Kazakhstan (Baikonur)': {
-        'base_cost': 120_000_000,
-        'monthly_multipliers': [1.30, 1.25, 1.10, 0.95, 0.90, 0.88,
-                                 0.90, 0.92, 1.00, 1.10, 1.20, 1.30],
-        'max_launches_per_month': 4,
-        'co2_multiplier': 1.10,
-    },
-    'French Guiana (Kourou)': {
-        'base_cost': 155_000_000,
-        'monthly_multipliers': [0.95, 0.98, 1.00, 1.05, 1.10, 1.15,
-                                 1.10, 1.05, 1.00, 0.95, 0.92, 0.93],
-        'max_launches_per_month': 3,
-        'co2_multiplier': 1.00,
-    },
-    'India (Satish Dhawan)': {
-        'base_cost': 110_000_000,
-        'monthly_multipliers': [0.90, 0.88, 0.90, 1.00, 1.10, 1.30,
-                                 1.40, 1.35, 1.20, 0.95, 0.88, 0.88],
-        'max_launches_per_month': 3,
-        'co2_multiplier': 1.05,
-    },
-    'China (Taiyuan)': {
-        'base_cost': 115_000_000,
-        'monthly_multipliers': [1.10, 1.05, 0.98, 0.92, 0.90, 1.00,
-                                 1.15, 1.10, 0.98, 0.95, 1.00, 1.05],
-        'max_launches_per_month': 4,
-        'co2_multiplier': 1.08,
-    },
-    'New Zealand (Mahia)': {
-        'base_cost': 130_000_000,
-        'monthly_multipliers': [0.90, 0.92, 0.98, 1.05, 1.10, 1.15,
-                                 1.12, 1.08, 1.00, 0.95, 0.92, 0.88], 
-        'max_launches_per_month': 3,
-        'co2_multiplier': 1.00,
-    },
+    'Florida (Kennedy)':       {'max_launches_per_month': 20},
+    'California (Vandenberg)': {'max_launches_per_month': 20},
+    'Texas (Boca Chica)':      {'max_launches_per_month': 20},
+    'Virginia (Wallops)':      {'max_launches_per_month': 20},
+    'Alaska':                  {'max_launches_per_month': 20},
+    'Kazakhstan (Baikonur)':   {'max_launches_per_month': 20},
+    'French Guiana (Kourou)':  {'max_launches_per_month': 20},
+    'India (Satish Dhawan)':   {'max_launches_per_month': 20},
+    'China (Taiyuan)':         {'max_launches_per_month': 20},
+    'New Zealand (Mahia)':     {'max_launches_per_month': 20},
+}
+
+ERF_SEASONAL_MULTIPLIER = {
+    'Florida (Kennedy)':       [1.0, 1.0, 1.5, 2.0, 2.8, 3.5, 4.0, 3.5, 2.5, 1.8, 1.2, 1.0],
+    'California (Vandenberg)': [1.0, 1.0, 1.5, 2.0, 2.8, 3.5, 4.0, 3.5, 2.5, 1.8, 1.2, 1.0],
+    'Texas (Boca Chica)':      [1.0, 1.0, 1.5, 2.0, 2.8, 3.5, 4.0, 3.5, 2.5, 1.8, 1.2, 1.0],
+    'Virginia (Wallops)':      [1.0, 1.0, 1.5, 2.0, 2.8, 3.5, 4.0, 3.5, 2.5, 1.8, 1.2, 1.0],
+    'Alaska':                  [0.8, 0.8, 1.2, 2.2, 3.2, 4.2, 4.8, 4.2, 2.8, 1.5, 0.9, 0.8],
+    'Kazakhstan (Baikonur)':   [0.9, 0.9, 1.4, 2.0, 3.0, 3.8, 4.2, 3.8, 2.6, 1.7, 1.1, 0.9],
+    'French Guiana (Kourou)':  [2.0, 2.0, 2.0, 2.1, 2.2, 2.3, 2.3, 2.2, 2.1, 2.0, 2.0, 2.0],
+    'India (Satish Dhawan)':   [1.5, 1.5, 2.0, 2.5, 3.0, 3.5, 3.8, 3.5, 3.0, 2.2, 1.8, 1.5],
+    'China (Taiyuan)':         [1.0, 1.0, 1.5, 2.0, 2.8, 3.5, 4.0, 3.5, 2.5, 1.8, 1.2, 1.0],
+    'New Zealand (Mahia)':     [5.4, 5.4, 4.7, 3.4, 2.4, 1.4, 1.4, 1.6, 2.4, 3.8, 4.7, 5.4],
 }
 
 
@@ -98,10 +52,8 @@ def _month_from_step(step: int, delta_time: float) -> int:
     return int(round((year % 1) * 12)) % 12
 
 
-def get_launch_cost(site_name: str, month: int) -> float:
-    """Effective USD cost per launch for a site in a given month (0=Jan, 11=Dec)."""
-    s = LAUNCH_SITES[site_name]
-    return s['base_cost'] * s['monthly_multipliers'][month]
+def get_launch_cost() -> float:
+    return ROCKET_LAUNCH_COST_USD
 
 
 # ==================== Planning ====================
@@ -131,11 +83,9 @@ def plan_launches(requirements: dict, delta_time: float = 1 / 12) -> dict:
 
     all_slots: list[tuple[float, int, str]] = []   # (cost, step, site_name)
     for step in range(last_needed_step + 1):
-        month = _month_from_step(step, delta_time)
-        for site_name, info in LAUNCH_SITES.items():
-            cost = info['base_cost'] * info['monthly_multipliers'][month]
-            all_slots.append((cost, step, site_name))
-    all_slots.sort() 
+        for site_name in LAUNCH_SITES:
+            all_slots.append((ROCKET_LAUNCH_COST_USD, step, site_name))
+    all_slots.sort()
 
     remaining_cap: dict[tuple[int, str], int] = {
         (step, site): LAUNCH_SITES[site]['max_launches_per_month']
@@ -187,7 +137,8 @@ def simulate(requirements: dict, delta_time: float = 1 / 12) -> dict:
     launches_per_site = {site: 0 for site in LAUNCH_SITES}
     years_log, delivered_log, cost_log, pollution_log = [], [], [], []
 
-    max_year    = max(requirements.keys()) + 10
+    elevator_finish = START_YEAR + math.ceil(TOTAL_MASS / (ANNUAL_CAPACITY_PER_ELEVATOR * NUM_ELEVATORS))
+    max_year    = max(max(requirements.keys()), elevator_finish) + 10
     total_steps = int((max_year - START_YEAR) / delta_time) + 1
 
     for step in range(total_steps):
@@ -203,8 +154,8 @@ def simulate(requirements: dict, delta_time: float = 1 / 12) -> dict:
             n = schedule.get((step, site_name), 0)
             if n:
                 launches_per_site[site_name] += n
-                cost      += n * get_launch_cost(site_name, month)
-                pollution += n * ROCKET_CO2_KG_PER_LAUNCH * LAUNCH_SITES[site_name]['co2_multiplier']
+                cost      += n * get_launch_cost()
+                pollution += n * ERF_BASE_MW_M2 * ERF_SEASONAL_MULTIPLIER[site_name][month]
                 delivered += n * ROCKET_PAYLOAD_TONS
 
         years_log.append(year)
@@ -222,12 +173,12 @@ def simulate(requirements: dict, delta_time: float = 1 / 12) -> dict:
         'years':                   years_log,
         'mass_delivered':          delivered_log,
         'cumulative_cost':         cost_log,
-        'cumulative_pollution_kg': pollution_log,
+        'cumulative_erf':   pollution_log,
         'launches_per_site':       launches_per_site,
         'total_launches':          total_launches,
         'completion_year':         completion_year,
         'final_cost':              cost_log[-1]      if cost_log      else 0,
-        'final_pollution_kg':      pollution_log[-1] if pollution_log else 0,
+        'final_erf':               pollution_log[-1] if pollution_log else 0,
         'final_year':              years_log[-1]     if years_log     else START_YEAR,
     }
 
@@ -251,12 +202,10 @@ def plot_results(results: dict, title: str = "Rocket + Elevator Model", show: bo
     ax.set_title('Cumulative Cost')
 
     ax = axes[2]
-    ax.plot(results['years'],
-            [p / 1e9 for p in results['cumulative_pollution_kg']],
-            color='firebrick')
+    ax.plot(results['years'], results['cumulative_erf'], color='firebrick')
     ax.set_xlabel('Year')
-    ax.set_ylabel('CO₂ Emissions (million metric tons)')
-    ax.set_title('Cumulative Rocket CO₂ Emissions')
+    ax.set_ylabel('Cumulative ERF (mW/m²)')
+    ax.set_title('Cumulative Rocket ERF')
 
     plt.tight_layout()
     if show:
@@ -272,8 +221,7 @@ def print_summary(results: dict):
     print(f"Simulation end year:   {results['final_year']:.2f}")
     print(f"Total rocket launches: {results['total_launches']:,}")
     print(f"Final cumulative cost: ${results['final_cost'] / 1e9:.2f}B")
-    co2_mt = results['final_pollution_kg'] / 1e9   # kg → million metric tons
-    print(f"Total rocket CO₂:      {co2_mt:.3f} million metric tons")
+    print(f"Total rocket ERF:      {results['final_erf']:.3f} mW/m2")
     print()
     print("Launches by site (greedy cheapest-first):")
     for site, n in sorted(results['launches_per_site'].items(), key=lambda x: -x[1]):
@@ -282,12 +230,111 @@ def print_summary(results: dict):
     print("=" * 65)
 
 
+# ==================== Requirement Sweep ====================
+
+def sweep_deadline(deadline_years: list[int],
+                   fraction: float = 1.0,
+                   delta_time: float = 1 / 12) -> list[dict]:
+    """
+    Run simulate() for each deadline year and collect outcomes.
+
+    For each year in deadline_years, builds requirements {year: fraction}
+    and records completion_year, final_erf, total_launches, and final_cost.
+    This shows how aggressiveness of the deadline drives rocket use and pollution.
+    """
+    results = []
+    for year in deadline_years:
+        r = simulate({year: fraction}, delta_time)
+        results.append({
+            'deadline_year':   year,
+            'completion_year': r['completion_year'],
+            'final_erf':       r['final_erf'],
+            'total_launches':  r['total_launches'],
+            'final_cost':      r['final_cost'],
+        })
+    return results
+
+
+def plot_sweep(sweep_results: list[dict],
+               title: str = "Pollution vs Deadline",
+               show: bool = True):
+    deadlines = [r['deadline_year']  for r in sweep_results]
+    erfs      = [r['final_erf']      for r in sweep_results]
+    launches  = [r['total_launches'] for r in sweep_results]
+    costs     = [r['final_cost'] / 1e9 for r in sweep_results]
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    fig.suptitle(title)
+
+    ax = axes[0]
+    ax.plot(deadlines, erfs, color='firebrick', marker='o', markersize=3)
+    ax.set_xlabel('Deadline Year')
+    ax.set_ylabel('Total ERF (mW/m²)')
+    ax.set_title('Pollution vs Deadline')
+
+    ax = axes[1]
+    ax.plot(deadlines, launches, color='orange', marker='o', markersize=3)
+    ax.set_xlabel('Deadline Year')
+    ax.set_ylabel('Total Rocket Launches')
+    ax.set_title('Launches vs Deadline')
+
+    ax = axes[2]
+    ax.plot(deadlines, costs, color='steelblue', marker='o', markersize=3)
+    ax.set_xlabel('Deadline Year')
+    ax.set_ylabel('Total Cost (USD billions)')
+    ax.set_title('Cost vs Deadline')
+
+    plt.tight_layout()
+    if show:
+        plt.show()
+
+
+def print_sweep_summary(sweep_results: list[dict]):
+    min_result = min(
+        (r for r in sweep_results if r['completion_year'] is not None),
+        key=lambda r: r['completion_year']
+    )
+    print("\n" + "=" * 65)
+    print("DEADLINE SWEEP SUMMARY")
+    print("=" * 65)
+    print(f"Deadline range:        {sweep_results[0]['deadline_year']} – {sweep_results[-1]['deadline_year']}")
+    print(f"Minimum completion:    {min_result['completion_year']:.2f}  "
+          f"(deadline {min_result['deadline_year']}, "
+          f"{min_result['total_launches']:,} launches, "
+          f"ERF {min_result['final_erf']:.1f} mW/m2)")
+    no_rocket = [r for r in sweep_results if r['total_launches'] == 0]
+    if no_rocket:
+        print(f"Elevator-only from:    deadline >= {no_rocket[0]['deadline_year']}")
+    print("=" * 65)
+
+
 # ==================== Entry point ====================
+
+def _achievable_range() -> tuple[int, int]:
+    rocket_per_month = sum(
+        info['max_launches_per_month'] for info in LAUNCH_SITES.values()
+    ) * ROCKET_PAYLOAD_TONS
+    elev_per_month = ANNUAL_CAPACITY_PER_ELEVATOR * NUM_ELEVATORS / 12
+    min_year = START_YEAR + math.ceil(
+        math.ceil(TOTAL_MASS / (rocket_per_month + elev_per_month)) / 12
+    )
+    max_year = START_YEAR + math.ceil(
+        math.ceil(TOTAL_MASS / elev_per_month) / 12
+    )
+    return min_year, max_year
+
 
 if __name__ == "__main__":
     from requirements import req_ex
 
-    for req in req_ex:
-        results = simulate(req)
-        print_summary(results)
-        plot_results(results, title=f"Rocket + Elevator  |  Requirements: {req}", show=True)
+    # for req in req_ex:
+    #     results = simulate(req)
+    #     print_summary(results)
+    #     plot_results(results, title=f"Rocket + Elevator  |  Requirements: {req}", show=True)
+
+    lo, hi = _achievable_range()
+    print(f"Achievable deadline range: {lo} – {hi}")
+    deadlines = list(range(lo-10, hi + 10))
+    sweep = sweep_deadline(deadlines, fraction=1.0)
+    print_sweep_summary(sweep)
+    plot_sweep(sweep, title="ERF and Completion Time vs Deadline Year", show=True)

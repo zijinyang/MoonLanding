@@ -21,7 +21,6 @@ def verify_requirements(req_dict):
         if year < current_year:
             raise ValueError(f"Year {year} must be greater than or equal to the previous year. Found: {year} < {current_year}")
         current_year = year
-    print("All requirements are valid.")
 
 if __name__ == "__main__":
     for req in req_ex:
